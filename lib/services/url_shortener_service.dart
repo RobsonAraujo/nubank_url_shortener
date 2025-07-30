@@ -15,11 +15,11 @@ class UrlShortenerService {
         body: jsonEncode({'url': url}),
       );
 
-      if (response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return ShortenedUrl.fromJson(data);
       } else {
-        throw Exception('Failed to shorten URL: ${response.statusCode}');
+        throw Exception('Failed to shorten URL: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       throw Exception('Network error: $e');
