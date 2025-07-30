@@ -24,45 +24,46 @@ class UrlShortenerProvider with ChangeNotifier {
       _shortenedUrls = await _storageService.getShortenedUrls();
       notifyListeners();
     } catch (e) {
-      _error = 'Failed to load shortened URLs: $e';
-      notifyListeners();
+      _setError('Failed to load shortened URLs: $e');
     }
   }
 
   Future<void> shortenUrl(String url) async {
-    if (url.trim().isEmpty) {
-      _error = 'Please enter a valid URL';
-      notifyListeners();
+    // Validate input
+    if (!_isValidInput(url)) {
       return;
     }
 
     // Clean and validate URL
     final cleanedUrl = _cleanAndValidateUrl(url);
     if (cleanedUrl == null) {
-      _error = 'Please enter a valid URL (e.g., https://example.com)';
-      notifyListeners();
+      _setError('Please enter a valid URL (e.g., https://example.com)');
       return;
     }
 
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    _startLoading();
 
     try {
       final shortenedUrl = await _urlService.shortenUrl(cleanedUrl);
-      await _storageService.addShortenedUrl(shortenedUrl);
-      await _loadShortenedUrls();
+      await _saveAndReloadUrls(shortenedUrl);
     } catch (e) {
-      _error = 'Failed to shorten URL: $e';
+      _setError('Failed to shorten URL: $e');
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      _stopLoading();
     }
   }
 
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  bool _isValidInput(String url) {
+    if (url.trim().isEmpty) {
+      _setError('Please enter a valid URL');
+      return false;
+    }
+    return true;
   }
 
   String? _cleanAndValidateUrl(String url) {
@@ -84,5 +85,26 @@ class UrlShortenerProvider with ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  void _setError(String errorMessage) {
+    _error = errorMessage;
+    notifyListeners();
+  }
+
+  void _startLoading() {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+  }
+
+  void _stopLoading() {
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> _saveAndReloadUrls(ShortenedUrl shortenedUrl) async {
+    await _storageService.addShortenedUrl(shortenedUrl);
+    await _loadShortenedUrls();
   }
 } 
